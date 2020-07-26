@@ -1,0 +1,164 @@
+'use stict'
+
+var config = {
+    canvas: 'konvas',
+    canvasParent:'konvas-parent',
+    toolBar: 'tool-bar-icons',
+    fontSize: 24,
+    fontFamily: 'Calibri',
+    fontPadding: 10,
+    stokeWidth: 4,
+    imgPadding: 50,
+    scale: 0.5,
+    tools: {
+        "select": {
+            id:'tool1',
+            className: 'fa fa-arrow-up active',
+            type: "Select",
+            desc: "This is not a tool. You can drag objects after selecting this, also selecting it you deselect any of the tool."
+        },
+        "pen": {
+            id:"tool2", 
+            className:"fa fa-pencil", 
+            type:"Pencil", 
+            desc:"Using this tool you can draw free hand anywhere anythng."
+        },
+        "eraser": {
+            id:"tool3", 
+            className:"fa fa-eraser", 
+            type:"Eraser", 
+            desc:"Using this tool to erase the continous strokes or fills."
+        },
+        "paint-brush": {
+            id:"tool4", 
+            className:"fa fa-paint-brush",
+            type:"Pain Brush", 
+            desc:"Using this tool you can fill color to any closed figure."
+        },
+        "text": {
+            id:"tool5",
+            className:"fa fa-font", 
+            type:"Text", 
+            desc:"Using this tool you can write anything in default font."
+        },
+        "tick": {
+            id:"tool6", 
+            className:"fa fa-check", 
+            type:"Tick", 
+            desc:"Using this tool you can draw the TICK shapes."
+        },
+        "cross": {
+            id:"tool7", 
+            className:"fa fa-remove", 
+            type:"Cross",
+            desc:"Using this tool you can draw the CROSS shapes."
+        },
+        "line": {
+            id:"tool8", 
+            className:"fa fa-arrows-h", 
+            type:"Line", 
+            desc:"Using this tool you can draw LINES."    
+        },
+        "circle": {
+            id:"tool9", 
+            className:"fa fa-circle-o", 
+            type:"Oval",
+            desc:"Using this tool you can draw OVAL shapes."
+        },
+        "rectangle": {
+            id:"tool10", 
+            className:"fa fa-square-o", 
+            type:"Rectangle", 
+            desc:"Using this tool you can pick any of the shape and use them."
+        },
+        "colors": {
+            id:"tool11", 
+            className:"fa fa-star-half-o", 
+            type:"Colors", 
+            desc:"Using this tool you can pick any of the color to draw and fills."
+        },
+        "save":{
+            id:"tool12", 
+            className:"fa fa-bookmark", 
+            type:"Save", 
+            desc:"You can save your changes offline as PNG file."
+        },
+        "zoom-in": {
+            id:"tool13", 
+            className:"fa fa-search-plus", 
+            type:"Zoom In", 
+            desc:"This can be used to zoom in."
+        },
+        "zoom-out": {
+            id:"tool14", 
+            className:"fa fa-search-minus", 
+            type:"Zoom Out", 
+            desc:"This can be used to zoom out."
+        },
+        "exit": {
+            id: "tool15",
+            className: "fa fa-trash",
+            type: "Exit",
+            desc: "You can exit the edit window using this",
+        },
+        'undo': {
+            id: "tool16",
+            className: "fa fa-undo",
+            type: "Undo",
+            desc: "You can undo the changes by taping on it."
+        }
+    },
+    toolsUsed: [
+        "select", 
+        "zoom-in", 
+        "zoom-out",
+        "pen",
+        "eraser",
+        "tick",
+        "cross",
+        "circle",
+        "rectangle", 
+        "undo",
+        "save",
+        "exit",
+    ],
+    TOOLS2ID:{
+        "select": "tool1",
+        "pen": "tool2",
+        "eraser":"tool3",
+        "paint-brush": "tool4",
+        "text": "tool5",
+        "tick": "tool6",
+        "cross": "tool7",
+        "line": "tool8",
+        "circle": "tool9",
+        "rectangle": "tool10",
+        "colors": "tool11",
+        "save": "tool12",
+        "zoomin": "tool13",
+        "zoomout": "tool14",
+        "exit": "tool15",
+        "undo": "tool16",
+    },
+    ID2TOOLS:{
+        "tool1" : "select",
+        "tool2" : "pen",
+        "tool3" : "eraser",
+        "tool4" : "paint-brush",
+        "tool5" : "text",
+        "tool6" : "tick",
+        "tool7" : "cross",
+        "tool8" : "line",
+        "tool9" : "circle",
+        "tool10" : "rectangle",
+        "tool11" : "colors",
+        "tool12" : "save",
+        "tool13" : "zoomin",
+        "tool14" : "zoomout",
+        "tool15" : "exit",
+        "tool16" : "undo",
+        
+    }
+};
+
+export default config;
