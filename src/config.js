@@ -9,7 +9,8 @@ var config = {
     fontPadding: 10,
     strokeWidth: 8,
     imgPadding: 50,
-    scale: 1,
+    maxZoomIn: 1.5,
+    maxZoomOut: 0.3,
     tools: {
         "select": {
             id:'tool1',
@@ -106,6 +107,12 @@ var config = {
             className: "fa fa-undo",
             type: "Undo",
             desc: "You can undo the changes by taping on it."
+        },
+        'redo': {
+            id: "tool17",
+            className: "fa fa-repeat",
+            type: "Redo",
+            desc: "You can redo the undo changes by taping on it."
         }
     },
     toolsUsed: [
@@ -120,6 +127,7 @@ var config = {
         "circle",
         "rectangle", 
         "undo",
+        "redo",
         "save",
         "exit",
     ],
@@ -140,6 +148,7 @@ var config = {
         "zoom-out": "tool14",
         "exit": "tool15",
         "undo": "tool16",
+        "redo": "tool17",
     },
     ID2TOOLS:{
         "tool1" : "select",
@@ -158,8 +167,7 @@ var config = {
         "tool14" : "zoom-out",
         "tool15" : "exit",
         "tool16" : "undo",
-        
+        "tool17" : "redo",
     }
 };
-
 export default config;

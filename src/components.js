@@ -22,19 +22,25 @@ class Konvas extends React.Component {
         this.syncGraphicsWithCursor = this.syncGraphicsWithCursor.bind(this);
         this.changeCursorIcon = this.changeCursorIcon.bind(this);
         this.getContexToDraw = this.getContexToDraw.bind(this);
-        this.getPostionOfDraw = this.getPostionOfDraw.bind(this);
+        this.getPosOfFancyCursor = this.getPosOfFancyCursor.bind(this);
+        this.getPosOfFancyCursorOnMainGroup = this.getPosOfFancyCursorOnMainGroup.bind(this);
         this.downloadKonvas = this.downloadKonvas.bind(this);
         this.startToPaint = this.startToPaint.bind(this);
         this.dropShape = this.dropShape.bind(this);
         this.handleOtherToolEvents = this.handleOtherToolEvents.bind(this);
+        this.zoom = this.zoom.bind(this);
+        this.undo = this.undo.bind(this);
+        this.redo = this.redo.bind(this);
+        this._undoRedo = new util.UndoRedo();
         this.state = {
-            activeToolId: "tool1"
+            activeToolId: "tool1",
+            scale: 1,
         };
         this.activeColor = "red";
         this.canPaint = false;
         this.canDropShape = false;
         this.strokeWidth = 7;
-        this.lastPointerPos = {
+        this.lastPointerPosOfFancyCursor = {
                 x: 0,
                 y: 0,
             };
@@ -66,7 +72,24 @@ class Konvas extends React.Component {
         this._context2D = "";
     }
 
+    undo(){
+        var obj = this._undoRedo.undo();
+        if(obj!==-1){
+            obj.remove();
+            this._mainLayer.batchDraw();
+        }
+    }
+
+    redo(){
+        var obj = this._undoRedo.redo();
+        if(obj !== -1){
+            this._mainGroup.add(obj);
+            this._mainLayer.draw(obj);
+        }
+    }
+
     handleOtherToolEvents(tool){
+        // incomplete function yet
         if(tool==='select'){
             this._selectionRect = util.getRect(0, 0, 0, 0, "rgba(0,0,255,0.25)", "rgba(0,0,255,1)")
             this._selectionRect.visible(false);
@@ -74,8 +97,6 @@ class Konvas extends React.Component {
             var x1, x2, y1, y2;
             // this._stage.on("mousedown touchstart", (event)=>{
             this._stage.on("dblclick dbltap", (event)=>{
-                console.log(event)
-                console.log("select md ts");
                 this._mainGroup.draggable(false);
                 x1 = this._stage.getPointerPosition();
                 x2 = x1.x;
@@ -91,7 +112,6 @@ class Konvas extends React.Component {
                 if(!this._selectionRect.visible()){
                     return;
                 }
-                console.log("select mm tm");
                 x2 = this._stage.getPointerPosition();
                 y2 = x2.y;
                 x2 = x2.x;
@@ -115,12 +135,10 @@ class Konvas extends React.Component {
                   });
           
                   var shapes = this._stage.find('.rect').toArray();
-                  console.log(shapes);
                   var box = this._selectionRect.getClientRect();
                   var selected = shapes.filter((shape) =>
                     Konva.Util.haveIntersection(box, shape.getClientRect())
                   );
-                  console.log(selected);
                 //   tr.nodes(selected);
                 //   layer.batchDraw();
             });    
@@ -128,16 +146,14 @@ class Konvas extends React.Component {
     }
 
     downloadKonvas(){
-        this._mainGroup.x(0);
-        this._mainGroup.y(0);
         this._mainLayer.draw();
-        var dataUrl = this._stage.toDataURL({
-            pixelRatio: 1,
+        var dataUrl = this._mainGroup.toDataURL({
+            pixelRatio: 0.5,
         });
         var link = document.createElement('a');
         link.href = dataUrl;
         link.download = this.props.fname;
-        // link.click();
+        link.click();
         link.remove();
     }
 
@@ -155,19 +171,39 @@ class Konvas extends React.Component {
         return _context;
     }
 
-    getPostionOfDraw(){
+
+    getPosOfFancyCursor(){
         var relativePos = this._stage.getPointerPosition();
-        this.lastPointerPos = relativePos;
+        var tool = config.ID2TOOLS[this.state.activeToolId];
+        var X = this._activeTool.height(); 
+        var Y = this._activeTool.width();
+        if(tool === "pen" || tool === "eraser" || tool === "paint-brush"){
+            X = X/5;
+            Y = 4*Y/5;
+        }
+        else{
+            X = X/2;
+            Y = Y/2;
+        }
+        relativePos = {
+            x: relativePos.x - X*this.state.scale,
+            y: relativePos.y - Y*this.state.scale
+        }
+        return relativePos;
+    }
+
+    getPosOfFancyCursorOnMainGroup(){
+        var relativePos = this._stage.getPointerPosition();
+        relativePos = {
+            x: (relativePos.x - this._mainGroup.x())/this.state.scale,
+            y: (relativePos.y - this._mainGroup.y())/this.state.scale
+        }
         return relativePos;
     }
 
     syncGraphicsWithCursor(){
-        var pos = this.getPostionOfDraw();
         var obj = this._activeTool;
-        pos = {
-            x: pos.x - obj.height()/5,
-            y: pos.y - 4*obj.width()/5
-        }
+        var pos = this.getPosOfFancyCursor();
         obj.x(pos.x);
         obj.y(pos.y);
         this._cursorLayer.batchDraw();
@@ -176,11 +212,7 @@ class Konvas extends React.Component {
     dropShape(){
         var shape = config.ID2TOOLS[this.state.activeToolId];
         var shapeObj = "";
-        var pos = this.lastPointerPos;
-        pos = {
-            x: pos.x - this._activeTool.height()/5 - this._mainGroup.x(),
-            y: pos.y - 4*this._activeTool.width()/5 - this._mainGroup.y()
-        }
+        var pos = this.getPosOfFancyCursorOnMainGroup();
         switch(shape){
             case "line":
                 shapeObj = util.getZigZagLine(pos.x, pos.y, this.activeColor, this.strokeWidth);
@@ -200,6 +232,7 @@ class Konvas extends React.Component {
             default:
                 break;
         }
+        this._undoRedo.insert(shapeObj);
         this._mainGroup.add(shapeObj);
         this._mainLayer.batchDraw();
     }
@@ -217,17 +250,10 @@ class Konvas extends React.Component {
             this._context.strokeWidth = 30;
         }
         this._context.beginPath();
-        var prevPos = this.lastPointerPos;
-        var pos = this.getPostionOfDraw();
-        prevPos = {
-            x: prevPos.x - this._mainGroup.x(),
-            y: prevPos.y - this._mainGroup.y(),
-        };
+        var prevPos = this.lastPointerPosOfFancyCursor;
+        var pos = this.getPosOfFancyCursorOnMainGroup();
+        this.lastPointerPosOfFancyCursor = pos;
         this._context.moveTo(prevPos.x, prevPos.y);
-        pos = {
-            x: pos.x - this._mainGroup.x(),
-            y: pos.y - this._mainGroup.y(),
-        };
         this._context.lineTo(pos.x, pos.y);
         this._context.closePath();
         this._context.stroke();
@@ -237,8 +263,8 @@ class Konvas extends React.Component {
     changeCursorIcon(icon_url, tool){
         this.loadImage(icon_url).then(
             (icon)=>{
-                icon.scaleX(1);
-                icon.scaleY(1);
+                icon.scaleX(this.state.scale);
+                icon.scaleY(this.state.scale);
                 icon.x(this.props.height/2);
                 icon.y(this.props.width/2);
                 // icon.offsetX(icon.height()/2)
@@ -254,19 +280,16 @@ class Konvas extends React.Component {
             ()=>{
                 if(tool === 'pen' || tool === 'eraser'){
                     this._activeTool.on("mousedown touchstart", (event)=>{
-                        // console.log("activetool mousedown touchstart");
                         this.canPaint = true;
-                        this.lastPointerPos = this._stage.getPointerPosition();
+                        this.lastPointerPosOfFancyCursor = this.getPosOfFancyCursorOnMainGroup();
                         
                     });
                     this._activeTool.on("mousemove touchmove", (event)=>{
-                        // console.log("activetool mousemove touchmove");
                         if(this.canPaint===true){
                             this.startToPaint();
                         }
                     });
                     this._activeTool.on("mouseup touchend", (event)=>{
-                        // console.log("activetool mouseend touchend");
                         this.canPaint = false;
                     });
                 }
@@ -274,32 +297,25 @@ class Konvas extends React.Component {
                 tool === 'circle' || tool === 'rectangle' ||
                 tool === 'line'){
                     this._activeTool.on("mousemove touchstart", (event)=>{
-                        // console.log("activetool touchstart");
                         this.canDropShape = true;
                     });
-                    // this._activeTool.on("mousedown")
                     this._activeTool.on("mouseup touchend", (event)=>{
-                        // console.log("activetool mouseend touchend");
                         if(this.canDropShape === true){
                             this.dropShape();
                             this.canDropShape = false;
                         }
                     });
                 }
-                else if(tool === "zoom-in"){
-                    this._mainLayer.scale({
-                        x: 1.25,
-                        y: 1.25
-                    })
-                    this._mainLayer.batchDraw();
-                }
-                else if(tool === "zoom-out"){
-                    this._mainLayer.scale({
-                        x: 0.25,
-                        y: 0.25
-                    })
-                    this._mainLayer.batchDraw();
-
+                else if(tool === "zoom-in" || tool === "zoom-out"){
+                    this._stage.on("mousedown touchstart", (event)=>{
+                        var deltaScale = tool==="zoom-in"?0.10:-0.10;
+                        var newScale = this.state.scale + deltaScale;
+                        if(newScale>=config.maxZoomOut && newScale<=config.maxZoomIn){
+                            this.setState({
+                                scale: newScale,
+                            });
+                        }
+                    });
                 }
             }
         );
@@ -362,7 +378,7 @@ class Konvas extends React.Component {
                 cursor = 'none'
                 cImg = zoomout;
                 break;
-                
+            
             default:
                 cursor = "auto";  
                 this._mainGroup.draggable(true);
@@ -400,22 +416,43 @@ class Konvas extends React.Component {
         })
     }
 
-    componentDidUpdate(){
-        this.changeCursor();
+    componentDidUpdate(prevProps, prevState){
+        if(prevState.activeToolId !== this.state.activeToolId){
+            this.changeCursor();
+        }
+        if(prevState.scale !== this.state.scale){
+            this.zoom(prevState.scale);
+        }
     }
 
+    zoom(oldScale){
+        var __scale = this.state.scale;
+        var pos = this.getPosOfFancyCursor();
+        var actualPointerPos = {
+            x: (pos.x - this._mainGroup.x())/oldScale,
+            y: (pos.y - this._mainGroup.y())/oldScale
+        }
+        this._mainGroup.scale({
+            x: __scale,
+            y: __scale
+        })
+        var adjustedScaledPos = {
+            x: pos.x - actualPointerPos.x * __scale,
+            y: pos.y - actualPointerPos.y * __scale
+        }
+        this._mainGroup.position(adjustedScaledPos);
+        this._mainLayer.batchDraw();
+    }
     componentDidMount(){
         this.loadImage(this.props.imgUrl).then(
             (imageObj)=>{
-            this.imgH = imageObj.height()*config.scale;
-            this.imgW = imageObj.width()*config.scale;
+            this.imgH = imageObj.height();
+            this.imgW = imageObj.width();
             this._mainGroup = util.getGroup(0, 0, true, (pos)=>{
                 let x = pos.x, y = pos.y;
                 let pad = config.imgPadding;
-                // bound the coordinates between
-                // -(imageSize+Padding-stageSize) to Padding
-                var imgH_ = this.props.height - this.imgH - pad;
-                var imgW_ = this.props.width - this.imgW - pad;
+                var imgH_ = this.props.height - this.imgH*this.state.scale - pad;
+                var imgW_ = this.props.width - this.imgW*this.state.scale - pad;
                 x = x>pad?pad:x<imgW_?imgW_:x;
                 y = y>pad?pad:y<imgH_?imgH_:y;
                 return {
@@ -430,15 +467,17 @@ class Konvas extends React.Component {
             this._stage.width(this.imgW);
         });
         this.changeCursor();
-        console.log(this._stage.eventListeners);
+        var undoId = config.TOOLS2ID["undo"]
+        var redoId = config.TOOLS2ID["redo"]
+        var undoEle = document.getElementById(undoId);
+        var redoEle = document.getElementById(redoId);
+        undoEle.onclick = this.undo;
+        redoEle.onclick = this.redo;
     }
     componentWillUnmount(){
         this._stage = undefined;
     }
     
-    zoomin(){
-        console.log("zoomin");
-    }
 
     render(){
         return (
@@ -491,7 +530,7 @@ class ToolBar extends React.Component{
             this.props.changeTool(id);
         }
         
-        if(id === "tool12"){
+        if(config.ID2TOOLS[id] === "save"){
             this.props.downloadKonvas();
         }
     }

@@ -1,6 +1,81 @@
 import Konva from 'konva'
 import config from './config'
 
+class Stack{
+    constructor(){
+        this.objList = [];
+        this.ptr = -1;
+    }
+    isEmpty(){
+        return this.ptr === -1;
+    }
+    peek(){
+        return this.isEmpty()?-1:this.objList[this.ptr];
+    }
+    push(obj){
+        this.ptr++;
+        this.objList[this.ptr] = obj;
+    }
+    pop(){
+        if(this.isEmpty()){
+            return -1;
+        }
+        var __tmp = this.objList[this.ptr];
+        delete this.objList[this.ptr];
+        this.ptr--;
+        return __tmp;
+    }
+    renew(){
+        delete this.objList;
+        this.objList = [];
+        this.ptr = -1;
+    }
+}
+
+class UndoRedo{
+    constructor(){
+        this._undoStack = new Stack();
+        this._redoStack = new Stack();
+    }
+    
+    insert(obj){
+        this._undoStack.push(obj);
+        this._redoStack.renew();
+    }
+
+    remove(obj){
+        this._redoStack.push(obj);
+        var __popedObj;
+        while(!this._undoStack.isEmpty() && this._undoStack.peek() !== obj){
+            __popedObj= this._undoStack.pop();
+            this._redoStack.push(__popedObj)
+        }
+        __popedObj = this._undoStack.pop();
+        while(this._redoStack.peek() !== obj){
+            __popedObj = this._redoStack.pop();
+            this._undoStack.push(__popedObj)
+        }
+    }
+
+    undo(){
+        var _obj = this._undoStack.pop();
+        if(_obj !== -1){
+            this._redoStack.push(_obj);
+            return _obj;
+        }
+        return -1;
+    }
+
+    redo(){
+        var _obj = this._redoStack.pop();
+        // console.log(_obj);
+        if(_obj !== -1){
+            this._undoStack.push(_obj);
+            return _obj;
+        }
+        return -1;
+    }
+}
 
 function getImage(x, y, image, height, width){
     return new Konva.Image({
@@ -58,7 +133,8 @@ function getHollowCircle(x, y, radiusX, radiusY, boundryColor){
 
 
 function getCross(x, y, color, width){
-    console.log(x, y);
+    x -= 50;
+    y -= 50;
     var l1Points = [x+0, y+0, x+100, y+100]
     var l2Points = [x+0, y+100, x+100, y+0];
     var group = getGroup(0, 0, true, (pos)=>{
@@ -73,6 +149,7 @@ function getCross(x, y, color, width){
 
 
 function getTick(x, y, color, width){
+    x -= 75
     var l1Points = [x+0, y+0, x+30, y+25]
     var l2Points = [x+30, y+25, x+150, y-50];
     var group = getGroup(0, 0, true, (pos)=>{
@@ -86,7 +163,8 @@ function getTick(x, y, color, width){
 }
 
 function getZigZagLine(x, y, color, width){
-    x -= 280;
+    x -= 200;
+    y -= 60;
     var points = [x+80, y+80, x+120, y+40, x+120, 
         y+80, x+160, y+40, x+160, y+80, x+200, 
         y+40, x+200, y+80, x+240, y+40, x+240,
@@ -120,6 +198,8 @@ function getRect(x, y, height, width, color, boundryColor){
 }
 
 function getHollowRect(x, y, height, width, boundryColor){
+    x -= width/2;
+    y -= height/2;
     return getRect(x, y, height, width, "", boundryColor);
 }
 
@@ -145,5 +225,6 @@ export{
     getLine,
     getZigZagLine,
     getCross,
-    getTick
+    getTick,
+    UndoRedo,
 }
