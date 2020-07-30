@@ -481,9 +481,7 @@ class Konvas extends React.Component {
 
     render(){
         return (
-            <>
-            <this.props.toolBar active={this.state.activeToolId} changeTool={this.changeActiveTool} downloadKonvas={this.downloadKonvas}            />
-            </>
+            <this.props.toolBar active={this.state.activeToolId} changeTool={this.changeActiveTool} downloadKonvas={this.downloadKonvas} />
         );
     }
 }
@@ -555,10 +553,10 @@ function ButtonWithTutorial(props){
     props = props.props;
     var modalid = "modal-"+props.id;
     return (
-        <>
+        <div>
         <button onClick={props.onClick} id={props.id} className={props.className}></button>
         <InfoModal id={modalid} icon={props.className} type={props.type} desc={props.desc} />
-        </>
+        </div>
     );
 
 }
