@@ -1,5 +1,4 @@
 'use stict'
-
 var config = {
     canvas: 'konvas',
     canvasParent:'konvas-parent',
@@ -11,6 +10,8 @@ var config = {
     imgPadding: 50,
     maxZoomIn: 1.5,
     maxZoomOut: 0.3,
+    pixelRatio: 1,
+    minCursorScale: 0.75,
     tools: {
         "select": {
             id:'tool1',
