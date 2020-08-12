@@ -12,6 +12,9 @@ var config = {
     maxZoomOut: 0.3,
     pixelRatio: 1,
     minCursorScale: 0.75,
+    distPageMovePerMSec: 30,
+    pageMoverSize: 50,
+    pageMoverThumbSize: 30,
     tools: {
         "select": {
             id:'tool1',

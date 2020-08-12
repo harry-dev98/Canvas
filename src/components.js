@@ -32,10 +32,12 @@ class Konvas extends React.Component {
         this.handleOtherToolEvents = this.handleOtherToolEvents.bind(this);
         this.revokeAllEvents = this.revokeAllEvents.bind(this);
         this.removeActiveTool = this.removeActiveTool.bind(this);
+        this.boundImgToStage = this.boundImgToStage.bind(this);
         this.zoom = this.zoom.bind(this);
         this.undo = this.undo.bind(this);
         this.redo = this.redo.bind(this);
         this._undoRedo = new util.UndoRedo();
+        this._pageMover = new util.PageMover();
         this.state = {
             activeToolId: "tool1",
             scale: 1,
@@ -45,9 +47,9 @@ class Konvas extends React.Component {
         this.canDropShape = false;
         this.strokeWidth = 7;
         this.lastPointerPosOfFancyCursor = {
-                x: 0,
-                y: 0,
-            };
+            x: 0,
+            y: 0,
+        };
         this.imgH = 0;
         this.imgW = 0;
         // for rectangle
@@ -275,14 +277,30 @@ class Konvas extends React.Component {
                 icon.scaleY(Math.max(config.minCursorScale, this.state.scale));
                 icon.x(10);
                 icon.y(10);
-                // icon.offsetX(icon.height()/2)
-                // icon.offsetY(icon.width()/2)
                 this._activeTool = icon;
                 this._stage.on('mousemove touchmove tap dragmove', (event)=>{
                     this.syncGraphicsWithCursor();
+                    var pos1 = this._pageMover.getPosition();
+                    var pos2 = this.getPosOfFancyCursor();
+                    var d = Math.sqrt(Math.pow(pos1.x-pos2.x, 2)+Math.pow(pos1.y-pos2.y, 2));
+                    if(d<=2*config.pageMoverSize && !this._pageMover.isCursorOn){
+                        this._activeTool.remove();
+                        this.revokeAllEvents(false);
+                        this._stage.container().style.cursor = 'auto';
+                        this._cursorLayer.batchDraw();
+                        this._pageMover.isCursorOn = true;
+                    }
+                    if(d>2*config.pageMoverSize 
+                        && !this._pageMover.isActive 
+                        && this._pageMover.isCursorOn){
+                            this._cursorLayer.add(this._activeTool);
+                            this._stage.container().style.cursor = 'none';
+                            this._cursorLayer.batchDraw();
+                            this._pageMover.isCursorOn = false;
+                        }
                 });
                 this._stage.on('mouseleave', event =>{
-                    this.revokeAllEvents();
+                    this.revokeAllEvents(false);
                 })
                 this._cursorLayer.add(icon);
                 this._cursorLayer.draw();
@@ -411,16 +429,18 @@ class Konvas extends React.Component {
         }
         else{
             this.handleOtherToolEvents(tool);
-            this._cursorLayer.batchDraw();
+            // this._cursorLayer.batchDraw();
         }
         this._stage.container().style.cursor = cursor;
     }
 
-    revokeAllEvents(){
+    revokeAllEvents(strictly){
         this.canPaint = false;
         this.canDropShape = false;
         this.isTouchMove = false;
-        this._stage.off('dblclick click dbltap tap mouseup mousedown touchstart touchend dragstart dragend mousemove touchmove dragmove');
+        if(strictly){
+            this._stage.off('dblclick click dbltap tap mouseup mousedown touchstart touchend dragstart dragend mousemove touchmove dragmove');
+        }
     }
     removeActiveTool(){
         if(this._activeTool !== undefined){
@@ -431,7 +451,7 @@ class Konvas extends React.Component {
     }
 
     changeActiveTool(id){
-        this.revokeAllEvents();
+        this.revokeAllEvents(true);
         this.removeActiveTool();
         this.setState({
             activeToolId: id
@@ -484,27 +504,35 @@ class Konvas extends React.Component {
         this._mainLayer.batchDraw();
         this._cursorLayer.batchDraw();
     }
+
+
+    boundImgToStage(pos){
+        let x = pos.x, y = pos.y;
+        let pad = config.imgPadding;
+        var imgH_ = this.props.height - this.imgH*this.state.scale - pad;
+        var imgW_ = this.props.width - this.imgW*this.state.scale - pad;
+        x = x>pad?pad:x<imgW_?imgW_:x;
+        y = y>pad?pad:y<imgH_?imgH_:y;
+        return {
+            x: x,
+            y: y
+        }
+    }
+
     componentDidMount(){
         this.loadImage(this.props.imgUrl).then(
             (imageObj)=>{
             this.imgH = imageObj.height();
             this.imgW = imageObj.width();
-            this._mainGroup = util.getGroup(0, 0, true, (pos)=>{
-                let x = pos.x, y = pos.y;
-                let pad = config.imgPadding;
-                var imgH_ = this.props.height - this.imgH*this.state.scale - pad;
-                var imgW_ = this.props.width - this.imgW*this.state.scale - pad;
-                x = x>pad?pad:x<imgW_?imgW_:x;
-                y = y>pad?pad:y<imgH_?imgH_:y;
-                return {
-                    x: x,
-                    y: y
-                };
-            });
+            this._mainGroup = util.getGroup({x:0, y:0, name:"main-group"});
             this._mainGroup.add(imageObj);
+            var pgMvr = this._pageMover.getPageMover(this._stage.width()-100, this._stage.height()-100);
             this._mainLayer.add(this._mainGroup);
+            this._mainLayer.add(pgMvr);
             this._mainLayer.draw();
+            this._pageMover.addEventsToPageMover(this._mainGroup.name(), this.boundImgToStage);
         }).then(()=>{
+
             this.changeCursor();
             var undoId = config.TOOLS2ID["undo"];
             var redoId = config.TOOLS2ID["redo"];

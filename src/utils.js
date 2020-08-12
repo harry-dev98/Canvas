@@ -77,6 +77,158 @@ class UndoRedo{
     }
 }
 
+class PageMover{
+    constructor(){
+        // this.getPostition = this.getPostition.bind(this);
+        this.pageMover = undefined;
+        this.isActive = false;
+        this.isCursorOn = false;
+        this.scroller = undefined;
+        this.dir = undefined;
+        this.pagePos = {
+            x: 0,
+            y: 0
+        }
+    }
+
+    getPosition(){
+        return this.pageMover.position();
+    }
+
+    getPageMover(x, y){
+        var group  = getGroup({x:x, y:y, dragable:true, name:"page-mover"});
+        var biggerC = getCircle(0, 0, config.pageMoverSize, config.pageMoverSize, '#cccbd2', '#acabb0');
+        var smallerC = getCircle(0, 0, config.pageMoverThumbSize, config.pageMoverThumbSize, '#0b0a0a', '#100f0f');
+        biggerC.opacity(0.75);
+        biggerC.addName("biggerC");
+        smallerC.opacity(0.75);
+        smallerC.addName("smallerC");
+        biggerC.draggable(false);
+        group.add(biggerC);
+        group.add(smallerC);
+        this.pageMover = group;
+        return group;
+    }
+
+    addEventsToPageMover(mainG, boundImgToStage){
+        var __parent = this.pageMover.parent;
+        var __sibling;
+        __parent.children.each((child)=>{
+            if(child.name() === mainG){
+                __sibling = child;
+            }
+        })
+        var smC;
+        this.pageMover.children.each((child)=>{
+            if(child.name() === "smallerC"){
+                smC = child;
+            }
+        });
+        smC.dragBoundFunc((pos)=>{
+            var _x = this.pageMover.x();
+            var _y = this.pageMover.y();
+            return {
+                x: (pos.x>_x)?Math.min(pos.x, _x+50):Math.max(pos.x, _x-50),
+                y: (pos.y>_y)?Math.min(pos.y, _y+50):Math.max(pos.y, _y-50)
+            }
+        })
+        
+        smC.on('dragstart dragmove dragend', event=>{
+            event.cancelBubble = true;
+        })
+
+        var keepScrolling = ()=>{
+            var x_, y_;
+            switch(this.dir){
+                case "R":
+                    x_ = 1; y_ = 0;
+                    break;
+                case "RU":
+                    x_ = 1; y_ = -1;
+                    break;
+                case "U":
+                    x_ = 0; y_ = -1;
+                    break;
+                case "LU":
+                    x_ = -1; y_ = -1;
+                    break;
+                case "L":
+                    x_ = -1; y_ = 0;
+                    break;
+                case "LD":
+                    x_ = -1; y_ = 1;
+                    break;
+                case "D":
+                    x_ = 0; y_ = 1;
+                    break;
+                case "RD":
+                    x_ = 1; y_ = 1;
+                    break;
+                default:
+                    x_ = 0; y_ = 0;
+            }
+            this.scroller = setInterval(()=>{
+                this.pagePos = {
+                    x: this.pagePos.x + x_ * config.distPageMovePerMSec,
+                    y: this.pagePos.y + y_ * config.distPageMovePerMSec
+                };
+                this.pagePos = boundImgToStage(this.pagePos);
+                __sibling.x(this.pagePos.x);
+                __sibling.y(this.pagePos.y);
+                __parent.batchDraw();
+            }, 100);
+        }
+
+        smC.on('dragmove', event=>{
+            var _x = smC.x();
+            var _y = smC.y();
+            var dir = undefined;
+            var angle = 180 + Math.atan2(-_y, _x)*180 /Math.PI;
+            if(337.5 <= angle || angle < 22.5){
+                dir = "R";
+            }
+            else if(22.5 <= angle && angle < 67.5){
+                dir = "RU";
+            }
+            else if(67.5 <= angle && angle < 112.5){
+                dir = "U";
+            }
+            else if(112.5 <= angle && angle < 157.5){
+                dir = "LU";
+            }
+            else if(157.5 <= angle && angle < 202.5){
+                dir = "L";
+            }
+            else if(202.5 <= angle && angle < 247.5){
+                dir = "LD";
+            }
+            else if(247.5 <= angle && angle < 292.5){
+                dir = "D";
+            }
+            else if(292.5 <= angle && angle < 337.5){
+                dir = "RD";
+            }
+            if(this.dir === undefined || this.dir !== dir){
+                if(this.isActive){
+                    clearInterval(this.scroller);
+                }
+                this.isActive = true;
+                this.dir = dir;
+                keepScrolling();
+            }
+        })
+        smC.on('dragend', event=>{
+            this.dir = undefined;
+            clearInterval(this.scroller);
+            this.isActive = false;
+            smC.x(0);
+            smC.y(0);
+            __parent.batchDraw();
+        })
+    }
+}
+
+
 function getImage(x, y, image, height, width){
     return new Konva.Image({
         x: x,
@@ -203,12 +355,13 @@ function getHollowRect(x, y, height, width, boundryColor){
     return getRect(x, y, height, width, "", boundryColor);
 }
 
-function getGroup(x, y, draggable, boundFunc){
+function getGroup({x, y, draggable, boundFunc, name}){
     return new Konva.Group({
         x: x,
         y: y,
         draggable: draggable,
         dragBoundFunc: boundFunc,
+        name: name,
     });
 }
 
@@ -227,4 +380,6 @@ export{
     getCross,
     getTick,
     UndoRedo,
+    PageMover,
+
 }
