@@ -17,6 +17,7 @@ import line from './line.png';
 class Konvas extends React.Component {
     constructor(props){
         super(props);
+        this.getCanvasReady = this.getCanvasReady.bind(this);
         this.changeActiveTool = this.changeActiveTool.bind(this);
         this.changeCursor = this.changeCursor.bind(this);
         this.defaultCursor = this.defaultCursor.bind(this);
@@ -157,14 +158,14 @@ class Konvas extends React.Component {
         });
         this._mainLayer.draw();
         var dataUrl = this._mainGroup.toDataURL({
-            pixelRatio: 1,
+            pixelRatio: 0.5,
         });
         var link = document.createElement('a');
         link.href = dataUrl;
         link.download = this.props.fname;
         link.click();
         link.remove();
-        this.props.exitFunc(dataUrl);
+        // this.props.exitFunc(dataUrl);
     }
 
     getContexToDraw(){
@@ -511,6 +512,7 @@ class Konvas extends React.Component {
         let pad = config.imgPadding;
         var imgH_ = this.props.height - this.imgH*this.state.scale - pad;
         var imgW_ = this.props.width - this.imgW*this.state.scale - pad;
+        console.log(pos);
         x = x>pad?pad:x<imgW_?imgW_:x;
         y = y>pad?pad:y<imgH_?imgH_:y;
         return {
@@ -519,27 +521,53 @@ class Konvas extends React.Component {
         }
     }
 
-    componentDidMount(){
-        this.loadImage(this.props.imgUrl).then(
-            (imageObj)=>{
-            this.imgH = imageObj.height();
-            this.imgW = imageObj.width();
-            this._mainGroup = util.getGroup({x:0, y:0, name:"main-group"});
-            this._mainGroup.add(imageObj);
-            var pgMvr = this._pageMover.getPageMover(this._stage.width()-100, this._stage.height()-100);
-            this._mainLayer.add(this._mainGroup);
-            this._mainLayer.add(pgMvr);
-            this._mainLayer.draw();
-            this._pageMover.addEventsToPageMover(this._mainGroup.name(), this.boundImgToStage);
-        }).then(()=>{
+    getCanvasReady(){
+        var imgPos = {x: 0, y: 0};
+        this._mainGroup = util.getGroup({x: 0, y: 0, draggable: false, name: "main-group"});
+        return new Promise((resolve, reject)=>{
+            this.props.imgUrl.forEach(async (url, index)=>{
+                await this.loadImage(url)
+                .then((imageObj)=>{
+                    this.imgH += imageObj.height();
+                    this.imgW = Math.max(this.imgW, imageObj.width());
+                    imageObj.position(imgPos);
+                    this._mainGroup.add(imageObj);
+                    this._mainGroup.add(util.getSimpleText({
+                        x: imgPos.x,
+                        y: imgPos.y,
+                        text: 'Answer Sheet No. '+(index+1),
+                        color: 'black',
+                    }))
+                    imgPos = {
+                        x: 0,
+                        y: this.imgH,
+                    }
+                    if(index == this.props.imgUrl.length-1){
+                        resolve(this._mainGroup);
+                    }
+                })
+                .catch((error)=>{
+                    reject(error);
+                })
+            });
+        });
+    }
 
+    componentDidMount(){
+        
+        this.getCanvasReady()
+        .then((group)=>{
+            console.log(group);
+            var pgMvr = this._pageMover.getPageMover(this._stage.width()-100, this._stage.height()-100);
+            this._mainLayer.add(group);
+            this._mainLayer.add(pgMvr);
+            this._pageMover.addEventsToPageMover(this._mainGroup.name(), this.boundImgToStage);
+            this._undoRedo.addUndoRedoEvents(this.undo, this.redo);
             this.changeCursor();
-            var undoId = config.TOOLS2ID["undo"];
-            var redoId = config.TOOLS2ID["redo"];
-            var undoEle = document.getElementById(undoId);
-            var redoEle = document.getElementById(redoId);
-            undoEle.onclick = this.undo;
-            redoEle.onclick = this.redo;
+            this._mainLayer.draw();
+        })
+        .catch((error)=>{
+            console.log(error);
         });
     }
     componentWillUnmount(){

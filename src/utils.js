@@ -38,6 +38,15 @@ class UndoRedo{
         this._redoStack = new Stack();
     }
     
+    addUndoRedoEvents(undo, redo){
+        var undoId = config.TOOLS2ID["undo"];
+        var redoId = config.TOOLS2ID["redo"];
+        var undoEle = document.getElementById(undoId);
+        var redoEle = document.getElementById(redoId);
+        undoEle.onclick = undo;
+        redoEle.onclick = redo;
+    }
+
     insert(obj){
         this._undoStack.push(obj);
         this._redoStack.renew();
@@ -168,9 +177,10 @@ class PageMover{
                     x_ = 0; y_ = 0;
             }
             this.scroller = setInterval(()=>{
+                var gradient = Math.sqrt(Math.pow(smC.x(), 2)+Math.pow(smC.y(), 2))/50;
                 this.pagePos = {
-                    x: this.pagePos.x + x_ * config.distPageMovePerMSec,
-                    y: this.pagePos.y + y_ * config.distPageMovePerMSec
+                    x: this.pagePos.x + x_ * config.distPageMovePerMSec * gradient,
+                    y: this.pagePos.y + y_ * config.distPageMovePerMSec * gradient
                 };
                 this.pagePos = boundImgToStage(this.pagePos);
                 __sibling.x(this.pagePos.x);
@@ -365,6 +375,17 @@ function getGroup({x, y, draggable, boundFunc, name}){
     });
 }
 
+function getSimpleText({x, y, text, color}){
+    return new Konva.Text({
+        x: x,
+        y: y,
+        text: text,
+        fontSize: config.fontSize,
+        fontFamily: config.fontFamily,
+        padding: config.fontPadding,
+        fill: color,
+      });
+}
 
 export{
     getCircle,
@@ -379,6 +400,7 @@ export{
     getZigZagLine,
     getCross,
     getTick,
+    getSimpleText,
     UndoRedo,
     PageMover,
 

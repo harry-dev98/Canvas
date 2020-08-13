@@ -3,16 +3,16 @@ var config = {
     canvas: 'konvas',
     canvasParent:'konvas-parent',
     toolBar: 'tool-bar-icons',
-    fontSize: 24,
+    fontSize: 36,
     fontFamily: 'Calibri',
     fontPadding: 10,
-    strokeWidth: 8,
+    strokeWidth: 12,
     imgPadding: 50,
     maxZoomIn: 1.5,
     maxZoomOut: 0.3,
     pixelRatio: 1,
     minCursorScale: 0.75,
-    distPageMovePerMSec: 30,
+    distPageMovePerMSec: 100,
     pageMoverSize: 50,
     pageMoverThumbSize: 30,
     tools: {
@@ -117,10 +117,17 @@ var config = {
             className: "fa fa-repeat",
             type: "Redo",
             desc: "You can redo the undo changes by taping on it."
+        },
+        'rotate': {
+            id: "tool18",
+            className: "fa fa-history",
+            type: 'rotate',
+            desc: 'You can rotate Image by 90 degrees on each click.'
         }
     },
     toolsUsed: [
         "select", 
+        "rotate",
         "zoom-in", 
         "zoom-out",
         "pen",

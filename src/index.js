@@ -4,8 +4,12 @@ import './index.css';
 import * as serviceWorker from './serviceWorker';
 import config from './config'
 
-import img from './IMG.jpg'; // input via API
+import img1 from './IMG1.png'; // input via API
+import img2 from './IMG2.png'; // input via API
+import img3 from './IMG3.png'; // input via API
 import KonvasPackage from './konvas';
+
+var img = new Array(img1, img2, img3);
 
 // var konvasParent = document.getElementById('konvas-parent');
 // konvasParent.onchange = ()=>{
