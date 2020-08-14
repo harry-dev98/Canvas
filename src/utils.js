@@ -76,8 +76,7 @@ class UndoRedo{
     }
 
     redo(){
-        var _obj = this._redoStack.pop();
-        // console.log(_obj);
+        var _obj = this._redoStack.pop()
         if(_obj !== -1){
             this._undoStack.push(_obj);
             return _obj;
@@ -293,12 +292,13 @@ function getHollowCircle(x, y, radiusX, radiusY, boundryColor){
     return getCircle(x, y, radiusX, radiusY, "", boundryColor);
 }
 
+function getMarkingStand({x, y}){
+    var l1Points = [x-10, y+20, x+5, y-15];
+    var l2Points = [x-10, y+30, x+5, y-25];
+    return shapeWith2Lines(l1Points, l2Points, "red", 12);
+}
 
-function getCross(x, y, color, width){
-    x -= 50;
-    y -= 50;
-    var l1Points = [x+0, y+0, x+100, y+100]
-    var l2Points = [x+0, y+100, x+100, y+0];
+function shapeWith2Lines(l1Points, l2Points, color, width){
     var group = getGroup(0, 0, true, (pos)=>{
         return pos;
     });
@@ -309,19 +309,20 @@ function getCross(x, y, color, width){
     return group;
 }
 
+function getCross(x, y, color, width){
+    x -= 50;
+    y -= 50;
+    var l1Points = [x+0, y+0, x+100, y+100]
+    var l2Points = [x+0, y+100, x+100, y+0];
+    return shapeWith2Lines(l1Points, l2Points, color, width);
+}
+
 
 function getTick(x, y, color, width){
     x -= 75
     var l1Points = [x+0, y+0, x+30, y+25]
     var l2Points = [x+30, y+25, x+150, y-50];
-    var group = getGroup(0, 0, true, (pos)=>{
-        return pos;
-    });
-    var l1 = getLine(l1Points, color, width);
-    var l2 = getLine(l2Points, color, width);
-    group.add(l1);
-    group.add(l2);
-    return group;
+    return shapeWith2Lines(l1Points, l2Points, color, width);
 }
 
 function getZigZagLine(x, y, color, width){
@@ -401,6 +402,7 @@ export{
     getCross,
     getTick,
     getSimpleText,
+    getMarkingStand,
     UndoRedo,
     PageMover,
 

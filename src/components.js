@@ -1,5 +1,6 @@
 import React from 'react';
 import Konva from 'konva';
+import { jsPDF } from 'jspdf';
 import * as util from './utils';
 import config from './config';
 import eraser from './eraser.png';
@@ -17,6 +18,7 @@ import line from './line.png';
 class Konvas extends React.Component {
     constructor(props){
         super(props);
+        this.dropMarks = this.dropMarks.bind(this)
         this.getCanvasReady = this.getCanvasReady.bind(this);
         this.changeActiveTool = this.changeActiveTool.bind(this);
         this.changeCursor = this.changeCursor.bind(this);
@@ -39,6 +41,7 @@ class Konvas extends React.Component {
         this.redo = this.redo.bind(this);
         this._undoRedo = new util.UndoRedo();
         this._pageMover = new util.PageMover();
+        this.totM = 0;
         this.state = {
             activeToolId: "tool1",
             scale: 1,
@@ -92,6 +95,41 @@ class Konvas extends React.Component {
         }
     }
 
+    dropMarks(){
+        var pos = this._mainGroup.absolutePosition();
+        console.log(pos);
+        var textNode = util.getSimpleText({x: -pos.x+this._stage.width()/4, y: -pos.y+this._stage.height()/4, color: 'red', text: 'Marks'});
+        this._mainGroup.add(textNode);
+        this._mainLayer.batchDraw();
+        var textarea = document.createElement('input');
+        textarea.type = 'number';
+        textNode.on('dblclick', () => {
+            var textPosition = textNode.getAbsolutePosition();
+            var stageBox = this._stage.container().getBoundingClientRect();
+            var areaPosition = {
+              x: stageBox.left + textPosition.x,
+              y: stageBox.top + textPosition.y,
+            };
+            document.body.appendChild(textarea);
+            textarea.style.position = 'absolute';
+            textarea.style.top = areaPosition.y + 'px';
+            textarea.style.left = areaPosition.x + 'px';
+            textarea.style.width = textNode.width();
+            textarea.style.width = 100 + 'px';
+            textarea.focus();
+            textarea.onblur = (event)=>{
+                textNode.text(textarea.value);
+                this.totM += parseInt(textarea.value);
+                textNode.fontSize(96);
+                textNode.strokeWidth(32);
+                textNode.draggable(true);
+                this._mainLayer.batchDraw();
+                document.body.removeChild(textarea);
+            };
+        });
+
+    }
+
     handleOtherToolEvents(tool){
         // incomplete function yet
         if(tool==='select'){
@@ -103,7 +141,7 @@ class Konvas extends React.Component {
             var x1, x2, y1, y2;
             // this._stage.on("mousedown touchstart", (event)=>{
             this._stage.on("dblclick dbltap", (event)=>{
-                this._mainGroup.draggable(false);
+                // this._mainGroup.draggable(false);
                 x1 = this._stage.getPointerPosition();
                 x2 = x1.x;
                 y1 = x1.y;
@@ -130,7 +168,7 @@ class Konvas extends React.Component {
                 this._cursorLayer.batchDraw();
             });
             this._stage.on('mouseup touchend', (event)=>{
-                this._mainGroup.draggable(true);
+                // this._mainGroup.draggable(true);
                 if (!this._selectionRect.visible()) {
                     return;
                   }
@@ -156,16 +194,38 @@ class Konvas extends React.Component {
             x: 1,
             y: 1
         });
+        this._mainGroup.x(0);
+        this._mainGroup.y(0);
         this._mainLayer.draw();
-        var dataUrl = this._mainGroup.toDataURL({
-            pixelRatio: 0.5,
+        var pdf = new jsPDF('p', 'mm', 'a4', true); 
+        var h = 0;
+        var dataUrl;
+        var firstItr = true;
+        var txt;
+        this._mainGroup.children.each((child)=>{
+            if(child.image !== undefined){
+                dataUrl = this._mainGroup.toDataURL({
+                    pixelRatio: 0.35,
+                    x: 0,
+                    y: h,
+                    height: child.height(),
+                    width: child.width() 
+                });
+                h += child.height();
+                if(firstItr){
+                    txt = "QUESTION :- "
+                    firstItr = false;
+                }
+                else{
+                    txt = "ANSWER :-"
+                    pdf.addPage();
+                }
+                pdf.text(txt, 7, 7);
+                pdf.addImage(dataUrl, "PNG", 8, 8, 194, 280, undefined, 'FAST');
+            }
         });
-        var link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = this.props.fname;
-        link.click();
-        link.remove();
-        // this.props.exitFunc(dataUrl);
+        pdf.save('stage.pdf');
+        this.props.exitFunc(this.totM);//dataUrl);
     }
 
     getContexToDraw(){
@@ -422,11 +482,11 @@ class Konvas extends React.Component {
             
             default:
                 cursor = "auto";  
-                this._mainGroup.draggable(true);
+                // this._mainGroup.draggable(true);
         }
         if(cursor === "none"){
             this.changeCursorIcon(cImg, tool);
-            this._mainGroup.draggable(false);
+            // this._mainGroup.draggable(false);
         }
         else{
             this.handleOtherToolEvents(tool);
@@ -448,7 +508,8 @@ class Konvas extends React.Component {
             this._activeTool.remove();
         }
         this._activeTool = undefined;
-        this._cursorLayer.removeChildren();
+        this._cursorLayer.destroyChildren();
+        this._cursorLayer.batchDraw();
     }
 
     changeActiveTool(id){
@@ -509,10 +570,9 @@ class Konvas extends React.Component {
 
     boundImgToStage(pos){
         let x = pos.x, y = pos.y;
-        let pad = config.imgPadding;
+        let pad = config.imgPadding/this.state.scale;
         var imgH_ = this.props.height - this.imgH*this.state.scale - pad;
         var imgW_ = this.props.width - this.imgW*this.state.scale - pad;
-        console.log(pos);
         x = x>pad?pad:x<imgW_?imgW_:x;
         y = y>pad?pad:y<imgH_?imgH_:y;
         return {
@@ -524,7 +584,7 @@ class Konvas extends React.Component {
     getCanvasReady(){
         var imgPos = {x: 0, y: 0};
         this._mainGroup = util.getGroup({x: 0, y: 0, draggable: false, name: "main-group"});
-        return new Promise((resolve, reject)=>{
+        return new Promise(async (resolve, reject)=>{
             this.props.imgUrl.forEach(async (url, index)=>{
                 await this.loadImage(url)
                 .then((imageObj)=>{
@@ -542,7 +602,7 @@ class Konvas extends React.Component {
                         x: 0,
                         y: this.imgH,
                     }
-                    if(index == this.props.imgUrl.length-1){
+                    if(index === this.props.imgUrl.length-1){
                         resolve(this._mainGroup);
                     }
                 })
@@ -553,16 +613,24 @@ class Konvas extends React.Component {
         });
     }
 
-    componentDidMount(){
-        
+    addSomeBasicClickEventsOnTools(){
+        var markingId = config.TOOLS2ID["marking"];
+        var markingEle = document.getElementById(markingId);
+        markingEle.onclick = this.dropMarks;
+        var saveId = config.TOOLS2ID["save"];
+        var saveEle = document.getElementById(saveId);
+        saveEle.onclick = this.downloadKonvas;
+    }
+
+    componentDidMount(){ 
         this.getCanvasReady()
         .then((group)=>{
-            console.log(group);
             var pgMvr = this._pageMover.getPageMover(this._stage.width()-100, this._stage.height()-100);
             this._mainLayer.add(group);
             this._mainLayer.add(pgMvr);
             this._pageMover.addEventsToPageMover(this._mainGroup.name(), this.boundImgToStage);
             this._undoRedo.addUndoRedoEvents(this.undo, this.redo);
+            this.addSomeBasicClickEventsOnTools();
             this.changeCursor();
             this._mainLayer.draw();
         })
@@ -571,7 +639,7 @@ class Konvas extends React.Component {
         });
     }
     componentWillUnmount(){
-        this._stage.removeChildren();
+        this._stage.destroyChildren();
         this._stage.remove();
     }
 
@@ -626,17 +694,8 @@ class ToolBar extends React.Component{
                 this.status[id] = false;
             }
             else{
-                if (config.ID2TOOLS[id] === "save") {
-                    this.props.downloadKonvas();
-                }
-                else{
-                    this.props.changeTool(id);
-                }
+                this.props.changeTool(id);
             }
-        }
-        
-        if(config.ID2TOOLS[id] === "save"){
-            this.props.downloadKonvas();
         }
     }
     render(){

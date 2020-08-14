@@ -9,13 +9,17 @@ import img2 from './IMG2.png'; // input via API
 import img3 from './IMG3.png'; // input via API
 import KonvasPackage from './konvas';
 
-var img = new Array(img1, img2, img3);
-
+var img = [img1, img2, img3];
 // var konvasParent = document.getElementById('konvas-parent');
 // konvasParent.onchange = ()=>{
+
+function exitFunc(totM){
+  console.log(totM);
+}
+
   ReactDOM.render(
     // <React.StrictMode>
-      <KonvasPackage height={700} width={800} img={img} fname="stage.png"/>,
+      <KonvasPackage height={700} width={800} img={img} fname="stage.png" exitFunc={exitFunc}/>,
     //  </React.StrictMode>,
     document.getElementById(config.canvas)
   );

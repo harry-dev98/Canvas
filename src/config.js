@@ -7,7 +7,7 @@ var config = {
     fontFamily: 'Calibri',
     fontPadding: 10,
     strokeWidth: 12,
-    imgPadding: 50,
+    imgPadding: 100,
     maxZoomIn: 1.5,
     maxZoomOut: 0.3,
     pixelRatio: 1,
@@ -123,11 +123,17 @@ var config = {
             className: "fa fa-history",
             type: 'rotate',
             desc: 'You can rotate Image by 90 degrees on each click.'
+        },
+        'marking': {
+            id: 'tool19',
+            className: "fa fa-percent",
+            type: "marking",
+            desc: "You can give marks."
         }
     },
     toolsUsed: [
         "select", 
-        "rotate",
+        "marking",
         "zoom-in", 
         "zoom-out",
         "pen",
@@ -160,6 +166,8 @@ var config = {
         "exit": "tool15",
         "undo": "tool16",
         "redo": "tool17",
+        "rotate": "tool18",
+        "marking": "tool19",
     },
     ID2TOOLS:{
         "tool1" : "select",
@@ -179,6 +187,8 @@ var config = {
         "tool15" : "exit",
         "tool16" : "undo",
         "tool17" : "redo",
+        "tool18" : "rotate",
+        "tool19" : "marking",
     }
 };
 export default config;
